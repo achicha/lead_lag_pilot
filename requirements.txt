@@ -1,0 +1,6 @@
+pytest
+pylint
+mypy
+matplotlib
+jupyter
+pandas
