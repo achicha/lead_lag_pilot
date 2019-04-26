@@ -59,13 +59,13 @@ cdef class Strategy():
 
     cpdef on_updates(self, dict message):
         self.updates.append(message)
-        # if message["message"] == "position_closed":
-        #     self.lag_exchange.cancel_order(
-        #         self.stop_id
-        #     )
-        #     self.lag_exchange.cancel_order(
-        #         self.order_id
-        #     )
+        if message["message"] == "position_closed":
+            self.lag_exchange.cancel_order(
+                self.stop_id
+            )
+            self.lag_exchange.cancel_order(
+                self.order_id
+            )
         sig_check()
 
     cdef update_lead(self, dict trade):
@@ -90,13 +90,13 @@ cdef class Strategy():
             amount,
             True
         )
-        # self.stop_id = self.lag_exchange.new_order(
-        #     "stop",
-        #     "XBTUSD",
-        #     stop_price,
-        #     -amount,
-        #     True
-        # )
+        self.stop_id = self.lag_exchange.new_order(
+            "stop",
+            "XBTUSD",
+            stop_price,
+            -amount,
+            True
+        )
         self.order_id = self.lag_exchange.new_order(
             "limit",
             "XBTUSD",
@@ -107,11 +107,11 @@ cdef class Strategy():
 
 
     cdef void move_position(self, long double target_price, long double stop_price, long double amount):
-        # self.lag_exchange.update_order(
-        #     self.stop_id,
-        #     stop_price,
-        #     -amount
-        # )
+        self.lag_exchange.update_order(
+            self.stop_id,
+            stop_price,
+            -amount
+        )
         self.lag_exchange.update_order(
             self.order_id,
             target_price,
@@ -120,18 +120,18 @@ cdef class Strategy():
         print(f"Updated order: {self.lag_exchange.orders[-1].price}" )
         
     cdef void close_position(self, long double size):
+        self.lag_exchange.cancel_order(
+            self.stop_id
+        )
+        self.lag_exchange.cancel_order(
+            self.order_id
+        )
         self.lag_exchange.new_order(
             "market",
             "XBTUSD",
             0.0,
             size,
             True
-        )
-        # self.lag_exchange.cancel_order(
-        #     self.stop_id
-        # )
-        self.lag_exchange.cancel_order(
-            self.order_id
         )
         
     cdef void check_difference(self):
@@ -163,10 +163,10 @@ cdef class Strategy():
                 elif positions["XBTUSD"].size < 0.0:
                     self.close_position(-positions["XBTUSD"].size)
                     print("Closed old position.")
-                    # self.create_position(target_price, stop_price, 1.0)
+                    self.create_position(target_price, stop_price, 1.0)
             else:
                 target_price = self.lag_price * (1.0 - self.target_percentage)
-                stop_price = self.lag_price * (1.0 + (self.lag_exchange.taker_fee * 2.0))
+                stop_price = self.lag_price * (1.0 + (self.lag_exchange.taker_fee))
                 if not positions:
                     print("Will Sell")
                     self.create_position(target_price, stop_price, -1.0)
@@ -175,4 +175,4 @@ cdef class Strategy():
                 elif positions["XBTUSD"].size > 0.0:
                     self.close_position(-positions["XBTUSD"].size)
                     print("Closed old position.")
-                    # self.create_position(target_price, stop_price, -1.0)
+                    self.create_position(target_price, stop_price, -1.0)

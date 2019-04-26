@@ -22,7 +22,7 @@ if __name__ == "__main__":
         exchanges=["coinbasepro", "kraken"],
         symbols=["BTCUSD", "XBTUSD"],
         from_date="2019-01-01 00:00:00",
-        to_date="2019-01-02 00:00:00",
+        to_date="2019-01-10 00:00:00",
     )
     print("Done with feed")
     print(lag_exchange.wallets)
