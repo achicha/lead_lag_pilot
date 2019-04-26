@@ -1,5 +1,7 @@
+import json
 from trader.exchanges import virtual
 from strategy import Strategy
+
 
 if __name__ == "__main__":
     feed = virtual.Feed()
@@ -13,12 +15,16 @@ if __name__ == "__main__":
         lag_exchange=lag_exchange
     )
     feed.subscribe("trades", lead_lag_strat.on_trade)
+    lag_exchange.subscribe("updates", lead_lag_strat.on_updates)
     # lag_exchange.attach_feed(feed)
     print("Starting feed!")
     feed.start(
         exchanges=["coinbasepro", "kraken"],
         symbols=["BTCUSD", "XBTUSD"],
         from_date="2019-01-01 00:00:00",
-        to_date="2019-03-01 00:00:00",
+        to_date="2019-01-02 00:00:00",
     )
+    print("Done with feed")
     print(lag_exchange.wallets)
+    with open("results/results.json", "w") as file:
+        json.dump(lead_lag_strat.updates, file)

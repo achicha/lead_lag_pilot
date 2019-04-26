@@ -1,6 +1,8 @@
 .python-version
 notebooks/*
 !notebooks/.gitkeep
+results/*
+!results/.gitkeep
 
 ##
 # Cython
