@@ -19,12 +19,13 @@ from trader.managers import MarginPerformance, StrategyPersistence
 # from strategy.utils.tools import get_trade_events
 
 cdef class Strategy():
- 
+
     cdef public object lag_exchange
     cdef public str lead_exchange_name
     cdef public str lag_exchange_name
     cdef public str time_diff
     cdef public long double target_percentage
+    cdef public long double stop_percentage
 
     cdef public long double lead_price
     cdef public long double lag_price
@@ -36,14 +37,15 @@ cdef class Strategy():
     cdef public str lag_symbol
     # cdef public object lead_dataframe
 
-    def __init__(self, lead_exchange_name, lag_exchange, time_diff="10s", min_profit=0.0004, lag_symbol="BTCUSD"):
+    def __init__(self, lead_exchange_name, lag_exchange, time_diff="10s", target_percentage=0.001, stop_percentage=0.001, lag_symbol="BTCUSD"):
         self.lag_exchange = lag_exchange
         self.lead_exchange_name = lead_exchange_name
         self.lag_exchange_name = lag_exchange.exchange
         self.time_diff = time_diff
-        self.target_percentage = (self.lag_exchange.taker_fee + self.lag_exchange.maker_fee) +  min_profit
+        self.target_percentage = target_percentage
+        self.stop_percentage = stop_percentage
         self.lag_symbol = lag_symbol
-        
+
         self.lead_price = 0.0
         self.lag_price = 0.0
         self.lead_price_list = deque([], maxlen=500)
@@ -52,7 +54,7 @@ cdef class Strategy():
         self.stop_id = 0
         self.updates = []
         # self.lead_dataframe = None
-        
+
     cpdef on_trade(self, dict trade):
         sig_check()
         if self.lead_exchange_name == trade["exchange"]:
@@ -76,7 +78,7 @@ cdef class Strategy():
         self.lead_price_list.append(trade)
         if self.lag_price > 0.0:
             self.check_difference()
-    
+
     cdef update_lag(self, dict trade):
         self.lag_price = trade["price"]
         self.lag_price_list.append(trade)
@@ -121,7 +123,7 @@ cdef class Strategy():
             -amount
         )
         print(f"Updated order: {self.lag_exchange.orders[-1].price}" )
-        
+
     cdef void close_position(self, long double size):
         self.lag_exchange.cancel_order(
             self.stop_id
@@ -136,7 +138,7 @@ cdef class Strategy():
             size,
             True
         )
-        
+
     cdef void check_difference(self):
         cdef object lead_dataframe
         cdef long double min_price
@@ -157,27 +159,25 @@ cdef class Strategy():
             max_pos = lead_dataframe.price.idxmax()
             if min_pos < max_pos:
                 target_price = self.lag_price * (1.0 + self.target_percentage)
-                stop_price = self.lag_price * (1.0 - (self.lag_exchange.maker_fee))
+                stop_price = self.lag_price * (1.0 - self.stop_percentage)
                 if not positions:
                     print("Will Buy")
                     self.create_position(target_price, stop_price, 1.0)
                 elif (positions[self.lag_symbol].size > 0.0) and target_price > self.lag_exchange.orders[-1].price:
                     self.move_position(target_price, stop_price, 1.0)
                 elif positions[self.lag_symbol].size < 0.0:
-                    pass
-                    # self.close_position(-positions[self.lag_symbol].size)
-                    # print("Closed old position.")
-                    # self.create_position(target_price, stop_price, 1.0)
+                    self.close_position(-positions[self.lag_symbol].size)
+                    print("Closed old position.")
+                    self.create_position(target_price, stop_price, 1.0)
             else:
                 target_price = self.lag_price * (1.0 - self.target_percentage)
-                stop_price = self.lag_price * (1.0 + (self.lag_exchange.maker_fee))
+                stop_price = self.lag_price * (1.0 + self.stop_percentage)
                 if not positions:
                     print("Will Sell")
                     self.create_position(target_price, stop_price, -1.0)
                 elif (positions[self.lag_symbol].size < 0.0) and target_price < self.lag_exchange.orders[-1].price: # Add logic for only updating positive direction.
                     self.move_position(target_price, stop_price, -1.0)
                 elif positions[self.lag_symbol].size > 0.0:
-                    pass
-                    # self.close_position(-positions[self.lag_symbol].size)
-                    # print("Closed old position.")
-                    # self.create_position(target_price, stop_price, -1.0)
+                    self.close_position(-positions[self.lag_symbol].size)
+                    print("Closed old position.")
+                    self.create_position(target_price, stop_price, -1.0)

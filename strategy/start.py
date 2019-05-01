@@ -4,7 +4,7 @@ from trader.exchanges import virtual
 from strategy import Strategy
 
 def run_simulation(lead_exchange_name, lag_exchange_name, lead_symbol, lag_symbol, taker_fee, maker_fee,
-                   from_date, to_date, time_diff, min_profit):
+                   from_date, to_date, time_diff, target_percentage, stop_percentage):
     feed = virtual.Feed()
     lag_exchange = virtual.Exchange(
         exchange=lag_exchange_name,
@@ -16,7 +16,8 @@ def run_simulation(lead_exchange_name, lag_exchange_name, lead_symbol, lag_symbo
         lag_exchange=lag_exchange,
         lag_symbol=lag_symbol,
         time_diff=time_diff,
-        min_profit=min_profit
+        target_percentage=target_percentage,
+        stop_percentage=stop_percentage,
     )
     feed.subscribe("trades", lead_lag_strat.on_trade)
     lag_exchange.subscribe("updates", lead_lag_strat.on_updates)
@@ -45,5 +46,6 @@ if __name__ == "__main__":
         from_date="2019-02-01 00:00:00",
         to_date="2019-02-10 00:00:00",
         time_diff="10s",
-        min_profit=0.0004
+        target_percentage=0.0016,
+        stop_percentage=0.00005
     )
