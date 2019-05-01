@@ -4,3 +4,4 @@ mypy
 matplotlib
 jupyter
 pandas
+cysignals
