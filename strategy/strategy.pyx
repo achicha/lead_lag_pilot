@@ -152,7 +152,7 @@ cdef class Strategy():
         ).set_index("datetime", drop=True).last(self.time_diff)
         min_price = lead_dataframe.price.min()
         max_price = lead_dataframe.price.max()
-        entry_condition = self.lag_price * (1.0 + self.target_percentage)
+        entry_condition = self.lag_price *  self.target_percentage
         positions = self.lag_exchange.positions
         if (abs(max_price - min_price) > entry_condition):
             min_pos = lead_dataframe.price.idxmin()
