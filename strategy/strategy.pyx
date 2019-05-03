@@ -167,7 +167,7 @@ cdef class Strategy():
                     self.move_position(target_price, stop_price, 1.0)
                 elif positions[self.lag_symbol].size < 0.0:
                     self.close_position(-positions[self.lag_symbol].size)
-                    print("Closed old position.")
+                    print("Closed old position. Will Buy")
                     self.create_position(target_price, stop_price, 1.0)
             else:
                 target_price = self.lag_price * (1.0 - self.target_percentage)
@@ -179,5 +179,5 @@ cdef class Strategy():
                     self.move_position(target_price, stop_price, -1.0)
                 elif positions[self.lag_symbol].size > 0.0:
                     self.close_position(-positions[self.lag_symbol].size)
-                    print("Closed old position.")
+                    print("Closed old position. Will sell")
                     self.create_position(target_price, stop_price, -1.0)
