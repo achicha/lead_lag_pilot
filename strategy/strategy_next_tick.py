@@ -23,8 +23,6 @@ class Strategy():
         self.lead_exchange_name = lead_exchange_name
         self.lag_exchange_name = lag_exchange.exchange
         self.time_diff = time_diff
-        self.target_percentage = target_percentage
-        self.stop_percentage = stop_percentage
         self.lag_symbol = lag_symbol
 
         self.lead_price = 0.0
@@ -44,13 +42,6 @@ class Strategy():
 
     def on_updates(self, message):
         self.updates.append(message)
-        if message["message"] == "position_closed":
-            self.lag_exchange.cancel_order(
-                self.stop_id
-            )
-            self.lag_exchange.cancel_order(
-                self.order_id
-            )
 
     def update_lead(self, trade):
         self.lead_price = trade["price"]
@@ -69,12 +60,21 @@ class Strategy():
         if positions:
             self.close_position(-positions[self.lag_symbol].size)
 
-    def create_position(self, target_price, stop_price, amount):
+    def create_position(self, amount):
         self.lag_exchange.new_order(
             "market",
             self.lag_symbol,
             0.0,
             amount,
+            True
+        )
+
+    def close_position(self, size):
+        self.lag_exchange.new_order(
+            "market",
+            self.lag_symbol,
+            0.0,
+            size,
             True
         )
 
@@ -84,20 +84,14 @@ class Strategy():
         ).set_index("datetime", drop=True).last(self.time_diff)
         min_price = lead_dataframe.price.min()
         max_price = lead_dataframe.price.max()
-        entry_condition = self.lag_price *  self.target_percentage
         positions = self.lag_exchange.positions
-        if (abs(max_price - min_price) > entry_condition):
-            min_pos = lead_dataframe.price.idxmin()
-            max_pos = lead_dataframe.price.idxmax()
-            if min_pos < max_pos:
-                target_price = self.lag_price * (1.0 + self.target_percentage)
-                stop_price = self.lag_price * (1.0 - self.stop_percentage)
-                if not positions:
-                    print("Will Buy")
-                    self.create_position(target_price, stop_price, 1.0)
-            else:
-                target_price = self.lag_price * (1.0 - self.target_percentage)
-                stop_price = self.lag_price * (1.0 + self.stop_percentage)
-                if not positions:
-                    print("Will Sell")
-                    self.create_position(target_price, stop_price, -1.0)
+        min_pos = lead_dataframe.price.idxmin()
+        max_pos = lead_dataframe.price.idxmax()
+        if min_pos < max_pos:
+            if not positions:
+                print("Will Buy")
+                self.create_position(1.0)
+        else:
+            if not positions:
+                print("Will Sell")
+                self.create_position(-1.0)
